@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { CreditCard, Search, User, ShoppingCart, ChevronDown, MapPin } from 'lucide-react';
+import { CreditCard } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { ordersAPI, deliveryAPI, paymentAPI, resolveImageUrl } from '../lib/api';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
+import { PaystackButton } from 'react-paystack';
 
 export default function CheckoutPage() {
   const { cartItems, cartTotal, clearCart } = useCart();
@@ -12,7 +13,6 @@ export default function CheckoutPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [loadingDelivery, setLoadingDelivery] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('cod');
   const [couponCode, setCouponCode] = useState('');
   const [isReturningCustomer, setIsReturningCustomer] = useState(false);
   const [formData, setFormData] = useState({
@@ -23,11 +23,10 @@ export default function CheckoutPage() {
     zipCode: '',
     mobile: '',
     email: '',
-    cardHolderName: '',
-    cardNumber: '',
-    expiry: '',
-    cvc: '',
   });
+
+  const public_key = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
+  const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
 
   // Fetch delivery information if user is returning customer
   useEffect(() => {
@@ -67,100 +66,139 @@ export default function CheckoutPage() {
     }
   }, [user?.email]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Place Order button clicked');
-    
+  // Validate form before payment
+  const validateForm = () => {
+    if (!formData.firstName || !formData.lastName) {
+      toast.error('Please enter your full name');
+      return false;
+    }
+    if (!formData.address || !formData.city || !formData.zipCode) {
+      toast.error('Please complete your delivery address');
+      return false;
+    }
+    if (!formData.mobile) {
+      toast.error('Please enter your mobile number');
+      return false;
+    }
+    if (!formData.email) {
+      toast.error('Please enter your email address');
+      return false;
+    }
     if (cartItems.length === 0) {
       toast.error('Your cart is empty');
-      return;
+      return false;
     }
+    return true;
+  };
 
+  // Create order before payment
+  const createPendingOrder = async () => {
+    const shippingAddress = {
+      name: `${formData.firstName} ${formData.lastName}`,
+      address: formData.address,
+      city: formData.city,
+      state: formData.city,
+      zip: formData.zipCode,
+      country: 'Nigeria'
+    };
+
+    const deliveryFee = cartTotal > 100000 ? 0 : cartItems.length * 500;
+    const totalAmount = cartTotal + deliveryFee;
+
+    const orderData = {
+      shippingAddress,
+      phoneNumber: formData.mobile,
+      paymentMethod: 'Credit/Debit Card',
+      deliveryFee,
+      totalAmount,
+      status: 'pending'
+    };
+
+    const orderResponse = await ordersAPI.create(orderData);
+    const createdOrderId = orderResponse.data?._id || orderResponse.data?.id;
+    return createdOrderId;
+  };
+
+  // Paystack success callback
+  const handlePaystackSuccess = async (reference: any) => {
     setLoading(true);
-    console.log('Starting order process...');
-
     try {
-      const shippingAddress = {
-        name: `${formData.firstName} ${formData.lastName}`,
-        address: formData.address,
-        city: formData.city,
-        state: formData.city,
-        zip: formData.zipCode,
-        country: 'Nigeria'
-      };
-
-      // Delivery fee calculation
-      const deliveryFee = cartTotal > 100000 ? 0 : cartItems.length * 500;
-      const totalAmount = cartTotal + deliveryFee;
-
-      // If payment method is COD or Transfer, create order directly
-      if (paymentMethod === 'cod' || paymentMethod === 'transfer') {
-        const orderData = {
-          shippingAddress,
-          phoneNumber: formData.mobile,
-          paymentMethod: paymentMethod === 'cod' ? 'Cash on Delivery' : 'Bank Transfer',
-          deliveryFee,
-          totalAmount
-        };
-
-        await ordersAPI.create(orderData);
+      // Verify payment on backend
+      const verifyResponse = await paymentAPI.verifyPayment(reference.reference);
+      if (verifyResponse.success && verifyResponse.data?.status === 'success') {
         await clearCart();
-        toast.success('Order placed successfully!');
+        toast.success('Payment successful! Order placed.');
         navigate('/dashboard');
-        return;
-      }
-
-      // For credit card payment, initialize Paystack payment
-      if (paymentMethod === 'credit') {
-        if (!formData.cardHolderName || !formData.cardNumber) {
-          toast.error('Please fill in card details');
-          setLoading(false);
-          return;
-        }
-
-        // First create the order
-        const orderData = {
-          shippingAddress,
-          phoneNumber: formData.mobile,
-          paymentMethod: 'Credit/Debit Card'
-        };
-
-        const orderResponse = await ordersAPI.create(orderData);
-        const orderId = orderResponse.data?._id || orderResponse.data?.id;
-
-        // Initialize payment with Paystack
-        const amountInNaira = totalAmount; // Use totalAmount including delivery
-        
-        const paymentResponse = await paymentAPI.initializePayment({
-          amount: amountInNaira,
-          email: formData.email,
-          orderId: orderId,
-          metadata: {
-            orderId,
-            items: cartItems.map(item => ({
-              name: item.product_id?.name,
-              quantity: item.quantity
-            }))
-          }
-        });
-
-        if (paymentResponse.success && paymentResponse.data.authorizationUrl) {
-          // Redirect to Paystack payment page
-          window.location.href = paymentResponse.data.authorizationUrl;
-        } else {
-          toast.error('Failed to initialize payment');
-        }
+      } else {
+        toast.error('Payment verification failed');
       }
     } catch (error: any) {
-      console.error('Checkout error:', error);
-      toast.error(error.response?.data?.message || 'Failed to place order. Please try again.');
+      console.error('Payment verification error:', error);
+      toast.error(error.response?.data?.message || 'Failed to verify payment');
     } finally {
       setLoading(false);
+      setPendingOrderId(null);
     }
+  };
+
+  // Paystack close callback
+  const handlePaystackClose = () => {
+    toast.info('Payment cancelled');
+    setLoading(false);
+    setPendingOrderId(null);
   };
 
   const deliveryFee = cartTotal > 100000 ? 0 : cartItems.length * 500;
   const totalAmount = cartTotal + deliveryFee;
+
+  // Generate unique reference
+  const reference = `ORDER_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+
+  // Paystack configuration
+  const paystackConfig = {
+    reference: reference,
+    email: formData.email || 'customer@example.com',
+    amount: Math.round(totalAmount * 100),
+    publicKey: public_key || '',
+    metadata: {
+      custom_fields: [
+        {
+          display_name: 'Customer Name',
+          variable_name: 'customer_name',
+          value: `${formData.firstName} ${formData.lastName}` || 'Customer'
+        }
+      ]
+    }
+  };
+
+  // Handle payment initialization - called when Paystack button is clicked
+  const handlePaystackClick = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    if (!public_key) {
+      toast.error('Payment gateway not configured. Please contact support.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const orderId = await createPendingOrder();
+      setPendingOrderId(orderId);
+    } catch (error: any) {
+      console.error('Order creation error:', error);
+      toast.error(error.response?.data?.message || 'Failed to create order. Please try again.');
+      setLoading(false);
+    }
+  };
+
+  const componentProps = {
+    ...paystackConfig,
+    text: loading ? 'Processing...' : 'Proceed to Payment',
+    onSuccess: handlePaystackSuccess,
+    onClose: handlePaystackClose,
+  };
 
   return (
     <div className="min-h-screen bg-yellow-50">
@@ -178,7 +216,7 @@ export default function CheckoutPage() {
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <h3 className="text-lg font-semibold mb-4">Review Item And Shipping</h3>
               {cartItems.map((item) => (
-                <div key={item._id} className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
+                <div key={item._id} className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg mb-4">
                   <img
                     src={resolveImageUrl(item.product_id?.image_url)}
                     alt={item.product_id?.name}
@@ -199,9 +237,9 @@ export default function CheckoutPage() {
             {/* Returning Customer */}
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <label className="flex items-center space-x-2 cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  className="rounded cursor-pointer" 
+                <input
+                  type="checkbox"
+                  className="rounded cursor-pointer"
                   checked={isReturningCustomer}
                   onChange={(e) => setIsReturningCustomer(e.target.checked)}
                   disabled={loadingDelivery}
@@ -217,7 +255,7 @@ export default function CheckoutPage() {
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold">Delivery Information</h3>
-                <button 
+                <button
                   type="button"
                   onClick={async () => {
                     try {
@@ -242,7 +280,7 @@ export default function CheckoutPage() {
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -341,7 +379,7 @@ export default function CheckoutPage() {
                     placeholder="Type here..."
                   />
                 </div>
-              </form>
+              </div>
             </div>
           </div>
 
@@ -358,7 +396,7 @@ export default function CheckoutPage() {
                   placeholder="Enter Coupon Code"
                   className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                 />
-                <button className="px-6 py-3 bg-green-600 text-white rounded-lg font-medium">
+                <button className="px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700">
                   Apply coupon
                 </button>
               </div>
@@ -380,135 +418,25 @@ export default function CheckoutPage() {
                   <span>₦{totalAmount.toFixed(2)}</span>
                 </div>
               </div>
-            </div>
-
-            {/* Payment Details */}
-            <div className="bg-white rounded-lg p-6 shadow-sm">
-              <h3 className="text-lg font-semibold mb-4">Payment Details</h3>
-
-              <div className="space-y-3 mb-6">
-                <label className="flex items-center space-x-3">
-                  <input
-                    type="radio"
-                    name="payment"
-                    value="cod"
-                    checked={paymentMethod === 'cod'}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="text-green-600"
+              
+              {public_key ? (
+                <div onClick={handlePaystackClick}>
+                  <PaystackButton
+                    {...componentProps}
+                    className="w-full mt-6 px-6 py-4 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2"
+                    disabled={loading || !formData.email}
                   />
-                  <span>Cash on Delivery</span>
-                </label>
-
-                <label className="flex items-center space-x-3">
-                  <input
-                    type="radio"
-                    name="payment"
-                    value="transfer"
-                    checked={paymentMethod === 'transfer'}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="text-green-600"
-                  />
-                  <span>Transfer</span>
-                </label>
-
-                <label className="flex items-center space-x-3">
-                  <input
-                    type="radio"
-                    name="payment"
-                    value="credit"
-                    checked={paymentMethod === 'credit'}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="text-green-600"
-                  />
-                  <span>Credit or Debit card</span>
-                </label>
-              </div>
-
-              {paymentMethod === 'credit' && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Email<span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                      placeholder="Type here..."
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Card Holder Name<span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.cardHolderName}
-                      onChange={(e) => setFormData({ ...formData, cardHolderName: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                      placeholder="Type here..."
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Card Number<span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        required
-                        value={formData.cardNumber}
-                        onChange={(e) => setFormData({ ...formData, cardNumber: e.target.value })}
-                        className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                        placeholder="0000*****1245"
-                      />
-                      <CreditCard className="w-4 h-4 absolute right-3 top-4 text-gray-400" />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Expiry
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.expiry}
-                        onChange={(e) => setFormData({ ...formData, expiry: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                        placeholder="MM/YY"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        CVC
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.cvc}
-                        onChange={(e) => setFormData({ ...formData, cvc: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                        placeholder="123"
-                      />
-                    </div>
-                  </div>
                 </div>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  className="w-full mt-6 px-6 py-4 bg-gray-400 text-white font-semibold rounded-lg cursor-not-allowed flex items-center justify-center space-x-2"
+                >
+                  <CreditCard className="w-5 h-5" />
+                  <span>Payment Gateway Not Configured</span>
+                </button>
               )}
-
-              <button
-                type="button"
-                onClick={(e) => handleSubmit(e as any)}
-                disabled={loading}
-                className="w-full mt-6 px-6 py-4 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2"
-              >
-                <CreditCard className="w-5 h-5" />
-                <span>{loading ? 'Processing...' : 'Place Order'}</span>
-              </button>
             </div>
           </div>
         </div>
