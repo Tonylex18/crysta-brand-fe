@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { cartAPI, CartItem, Product } from '../lib/api';
 import { useAuth } from './AuthContext';
+import { cartAPI, CartItem, Product } from '../pages/lib/api';
 
 // Define the actual cart item type that comes from the backend
 type CartItemWithProduct = Omit<CartItem, 'product_id' | 'id'> & {

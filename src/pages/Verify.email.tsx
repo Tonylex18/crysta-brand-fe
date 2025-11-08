@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { verificationAPI } from '../lib/api';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
+import { verificationAPI } from './lib/api';
 
 const Verifyemail = () => {
   const [email, setEmail] = useState('');

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { productsAPI } from "../lib/api";
+import { productsAPI } from "./lib/api";
 
 export default function Products() {
   const [products, setProducts] = useState<any[]>([]);

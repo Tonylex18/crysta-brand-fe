@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { Minus, Plus, X, ChevronDown, Tag } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
-import { resolveImageUrl } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
+import { resolveImageUrl } from './lib/api';
 
 export default function CartPage() {
   const { cartItems, updateQuantity, removeFromCart, cartTotal } = useCart();

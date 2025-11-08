@@ -274,10 +274,13 @@ export const deliveryAPI = {
 
 // Payment API
 export const paymentAPI = {
-  initializePayment: async (paymentData: any) => {
-    const response = await api.post('payment/initialize-payment', paymentData);
-    return response.data;
-  },
+  initializePayment: (data: { 
+    amount: number; 
+    email: string; 
+    orderId: string; 
+    reference: string; 
+    metadata?: any 
+  }) => api.post('/payment/initialize-payment', data),
   
   verifyPayment: async (reference: string) => {
     const response = await api.get(`payment/verify/${reference}`);

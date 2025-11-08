@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import SectionCard from './SectionCard';
-import { deliveryAPI } from '../../lib/api';
 import { toast } from 'react-toastify';
+import { deliveryAPI } from '../../pages/lib/api';
 
 type DeliveryInfo = {
   firstName: string;

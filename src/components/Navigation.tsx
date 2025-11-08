@@ -2,7 +2,7 @@ import { ChevronDown, Menu, Phone, Search, ShoppingCart, User, X } from "lucide-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { useCart } from "../contexts/CartContext"; // <-- Add this import
+import { useCart } from "../contexts/CartContext";
 import { toast } from "react-toastify";
 
 const Navigation = () => {

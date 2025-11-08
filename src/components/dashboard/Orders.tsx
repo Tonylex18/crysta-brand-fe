@@ -1,7 +1,7 @@
 import SectionCard from './SectionCard';
 import { useState, useEffect } from 'react';
-import { ordersAPI, resolveImageUrl } from '../../lib/api';
 import { toast } from 'react-toastify';
+import { ordersAPI, resolveImageUrl } from '../../pages/lib/api';
 
 interface OrderItem {
   _id: string;

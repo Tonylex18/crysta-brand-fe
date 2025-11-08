@@ -4,7 +4,7 @@ import { Heart, Filter } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
-import { productsAPI, Product as ApiProduct } from '../lib/api';
+import { productsAPI, Product as ApiProduct } from '../pages/lib/api';
 
 // Normalize backend product to UI product shape
 type Product = ApiProduct & { id: string; rating?: number };

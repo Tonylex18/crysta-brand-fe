@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { CreditCard } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
-import { ordersAPI, deliveryAPI, paymentAPI, resolveImageUrl } from '../lib/api';
+import { ordersAPI, deliveryAPI, paymentAPI, resolveImageUrl } from './lib/api';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import { PaystackButton } from 'react-paystack';
@@ -93,28 +93,28 @@ export default function CheckoutPage() {
 
   // Create order before payment
   const createPendingOrder = async () => {
-    const shippingAddress = {
-      name: `${formData.firstName} ${formData.lastName}`,
-      address: formData.address,
-      city: formData.city,
-      state: formData.city,
-      zip: formData.zipCode,
-      country: 'Nigeria'
-    };
-
     const deliveryFee = cartTotal > 100000 ? 0 : cartItems.length * 500;
     const totalAmount = cartTotal + deliveryFee;
 
     const orderData = {
-      shippingAddress,
+      shippingAddress: {
+        name: `${formData.firstName} ${formData.lastName}`,
+        address: formData.address,
+        city: formData.city,
+        state: formData.city,
+        zip: formData.zipCode,
+        country: 'Nigeria'
+      },
       phoneNumber: formData.mobile,
       paymentMethod: 'Credit/Debit Card',
       deliveryFee,
       totalAmount,
-      status: 'pending'
+      paymentStatus: 'pending'
     };
 
+    console.log('Creating order with data:', orderData);
     const orderResponse = await ordersAPI.create(orderData);
+    console.log('Order response:', orderResponse);
     const createdOrderId = orderResponse.data?._id || orderResponse.data?.id;
     return createdOrderId;
   };
@@ -151,14 +151,16 @@ export default function CheckoutPage() {
   const deliveryFee = cartTotal > 100000 ? 0 : cartItems.length * 500;
   const totalAmount = cartTotal + deliveryFee;
 
-  // Generate unique reference
-  const reference = `ORDER_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+  // Generate unique reference that will be used for both Paystack and our backend
+  const [paymentReference] = useState(() => 
+    `ORDER_${Date.now()}_${Math.random().toString(36).substring(7)}`
+  );
 
   // Paystack configuration
   const paystackConfig = {
-    reference: reference,
+    reference: paymentReference,
     email: formData.email || 'customer@example.com',
-    amount: Math.round(totalAmount * 100),
+    amount: Math.round(totalAmount * 100), // Amount in kobo
     publicKey: public_key || '',
     metadata: {
       custom_fields: [
@@ -166,6 +168,11 @@ export default function CheckoutPage() {
           display_name: 'Customer Name',
           variable_name: 'customer_name',
           value: `${formData.firstName} ${formData.lastName}` || 'Customer'
+        },
+        {
+          display_name: 'Order ID',
+          variable_name: 'order_id',
+          value: pendingOrderId || ''
         }
       ]
     }
@@ -184,11 +191,30 @@ export default function CheckoutPage() {
 
     setLoading(true);
     try {
+      // Step 1: Create the order
       const orderId = await createPendingOrder();
       setPendingOrderId(orderId);
+
+      // Step 2: Initialize payment record in backend
+      const deliveryFee = cartTotal > 100000 ? 0 : cartItems.length * 500;
+      const totalAmount = cartTotal + deliveryFee;
+      
+      await paymentAPI.initializePayment({
+        amount: totalAmount,
+        email: formData.email,
+        orderId: orderId,
+        reference: paymentReference,
+        metadata: {
+          customerName: `${formData.firstName} ${formData.lastName}`,
+          phoneNumber: formData.mobile
+        }
+      });
+
+      console.log('Order and payment initialized successfully with reference:', paymentReference);
+      // Paystack popup will open after this completes
     } catch (error: any) {
-      console.error('Order creation error:', error);
-      toast.error(error.response?.data?.message || 'Failed to create order. Please try again.');
+      console.error('Order/Payment initialization error:', error);
+      toast.error(error.response?.data?.message || 'Failed to initialize payment. Please try again.');
       setLoading(false);
     }
   };

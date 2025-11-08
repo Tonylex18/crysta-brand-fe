@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { paymentAPI } from '../lib/api';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { paymentAPI } from './lib/api';
 
 export default function PaymentCallback() {
   const [searchParams] = useSearchParams();

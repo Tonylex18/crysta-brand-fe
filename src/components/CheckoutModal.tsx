@@ -4,7 +4,7 @@ import { X, CreditCard } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
-import { ordersAPI } from '../lib/api';
+import { ordersAPI } from '../pages/lib/api';
 
 type CheckoutModalProps = {
   onClose: () => void;
