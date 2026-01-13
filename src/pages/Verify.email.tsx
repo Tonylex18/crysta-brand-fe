@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import { verificationAPI } from './lib/api';
+import { useAuth } from '../contexts/AuthContext';
+import { appendUserId, getUserId } from '../utils/navigation';
 
 const Verifyemail = () => {
   const [email, setEmail] = useState('');
@@ -9,6 +11,8 @@ const Verifyemail = () => {
   const [submitting, setSubmitting] = useState(false);
   const [resending, setResending] = useState(false);
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const userId = getUserId(user);
 
   useEffect(() => {
     const pending = sessionStorage.getItem('pendingEmail');
@@ -28,9 +32,14 @@ const Verifyemail = () => {
       await verificationAPI.verifyEmail(email, otp);
       toast.success('Email verified successfully');
       sessionStorage.removeItem('pendingEmail');
-      navigate('/dashboard');
-    } catch (err: any) {
-      const message = err?.response?.data?.message || 'Verification failed';
+      navigate(appendUserId('/dashboard', userId));
+    } catch (err: unknown) {
+      const message =
+        typeof err === 'object' && err && 'response' in err
+          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+          : err instanceof Error
+            ? err.message
+            : 'Verification failed';
       toast.error(message);
     } finally {
       setSubmitting(false);
@@ -46,8 +55,13 @@ const Verifyemail = () => {
       setResending(true);
       await verificationAPI.resendOtp(email);
       toast.success('A new OTP has been sent to your email');
-    } catch (err: any) {
-      const message = err?.response?.data?.message || 'Could not resend OTP';
+    } catch (err: unknown) {
+      const message =
+        typeof err === 'object' && err && 'response' in err
+          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+          : err instanceof Error
+            ? err.message
+            : 'Could not resend OTP';
       toast.error(message);
     } finally {
       setResending(false);

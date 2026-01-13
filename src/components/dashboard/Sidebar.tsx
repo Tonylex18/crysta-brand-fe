@@ -1,6 +1,13 @@
-type SidebarItem = { key: string; label: string; badge?: number };
+export type SidebarKey = 'account' | 'address' | 'orders' | 'ratings' | 'wallet' | 'delete';
+type SidebarItem = { key: SidebarKey; label: string; badge?: number };
 
-export default function Sidebar({ current, onSelect }: { current: string; onSelect: (key: string) => void }) {
+export default function Sidebar({
+  current,
+  onSelect,
+}: {
+  current: SidebarKey;
+  onSelect: (key: SidebarKey) => void;
+}) {
   const groups: { title: string; items: SidebarItem[] }[] = [
     {
       title: 'My Profile',
@@ -54,5 +61,4 @@ export default function Sidebar({ current, onSelect }: { current: string; onSele
     </aside>
   );
 }
-
 

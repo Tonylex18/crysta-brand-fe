@@ -69,3 +69,9 @@ npm run build
 ```
 
 The optimized files will be in the `dist/` directory.
+
+## Delivery Fee Calculator
+
+- New page: `/delivery-fee` (also linked in Navigation).
+- It calls the backend endpoint `POST /api/delivery/quote` using the address you provide.
+- Optional: to enable Google Places Autocomplete on this page, add a restricted Maps JavaScript API key to your HTML (or a custom loader) and restrict it to your domain.

@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useCart } from "../contexts/CartContext";
 import { toast } from "react-toastify";
+import { appendUserId, getUserId } from "../utils/navigation";
 
 const Navigation = () => {
   const [showSearchModal, setShowSearchModal] = useState(false);
@@ -15,6 +16,8 @@ const Navigation = () => {
   const { cartCount } = useCart(); // <-- Get cartCount from context
   const authToken = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
   const isAuthenticated = !!(user || authToken);
+  const userId = getUserId(user);
+  const deliveryPath = appendUserId('/delivery-fee', userId);
 
   const categories = [
     { name: 'Furniture', items: '240 Item Available', icon: '🛋️' },
@@ -55,7 +58,7 @@ const Navigation = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-8">
-              <button onClick={() =>  navigate('/')} className="flex items-center pointer space-x-2">
+              <button onClick={() =>  navigate(appendUserId('/', userId))} className="flex items-center pointer space-x-2">
                 <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
                   <ShoppingCart className="w-6 h-6 text-white" />
                 </div>
@@ -83,6 +86,12 @@ const Navigation = () => {
                     {item}
                   </button>
                 ))}
+                <button
+                  onClick={() => navigate(deliveryPath)}
+                  className="text-gray-700 hover:text-green-600 font-medium relative"
+                >
+                  Delivery Fee
+                </button>
               </div>
             </div>
 
@@ -92,7 +101,7 @@ const Navigation = () => {
                 </button>
 
               <button className="p-2 hover:bg-gray-100 rounded-full relative">
-                <ShoppingCart className="w-5 h-5 text-gray-700" onClick={() => navigate('/cart')} />
+                <ShoppingCart className="w-5 h-5 text-gray-700" onClick={() => navigate(appendUserId('/cart', userId))} />
                 {cartCount > 0 && (
                   <span className="absolute -top-1 -right-1 bg-green-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
                     {cartCount}
@@ -102,7 +111,7 @@ const Navigation = () => {
 
               <div className="relative">
                 {!isAuthenticated ? (
-                  <button className="p-2 hover:bg-gray-100 rounded-full" onClick={() => navigate('/auth')}>
+                  <button className="p-2 hover:bg-gray-100 rounded-full" onClick={() => navigate(appendUserId('/auth', userId))}>
                     <User className="w-5 h-5 text-gray-700" />
                   </button>
                 ) : (
@@ -120,7 +129,7 @@ const Navigation = () => {
                           className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
                           onClick={() => {
                             setShowUserMenu(false);
-                            navigate('/dashboard');
+                            navigate(appendUserId('/dashboard', userId));
                           }}
                         >
                           Dashboard
@@ -133,7 +142,7 @@ const Navigation = () => {
                               toast.success('Logged out');
                               setShowUserMenu(false);
                               navigate('/');
-                            } catch (e) {
+                            } catch {
                               toast.error('Logout failed');
                             }
                           }}
@@ -175,6 +184,15 @@ const Navigation = () => {
                   {item}
                 </button>
               ))}
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  navigate(deliveryPath);
+                }}
+                className="block w-full text-left px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 font-medium"
+              >
+                Delivery Fee
+              </button>
             </div>
           </div>
         )}

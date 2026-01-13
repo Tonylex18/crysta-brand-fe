@@ -12,6 +12,14 @@ const api = axios.create({
   },
 });
 
+// Public axios instance without auth interceptors
+const publicApi = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
 // Add auth token to requests if available
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('authToken');
@@ -139,7 +147,7 @@ export const authAPI = {
   
   getProfile: async () => {
     const response = await api.get('user/profile');
-    return response.data;
+    return response.data?.user || response.data;
   },
   
   signOut: async () => {
@@ -168,17 +176,18 @@ export const verificationAPI = {
 // Products API
 export const productsAPI = {
   getAll: async () => {
-    const response = await api.get('products/get-products');
+    // Use public API so products are visible without authentication
+    const response = await publicApi.get('products/get-products');
     return response.data;
   },
   
   getById: async (id: string) => {
-    const response = await api.get(`products/${id}`);
+    const response = await publicApi.get(`products/get-single-product/${id}`);
     return response.data;
   },
   
   getByCategory: async (categoryId: string) => {
-    const response = await api.get(`products/category/${categoryId}`);
+    const response = await publicApi.get(`products/category/${categoryId}`);
     return response.data;
   },
 };
@@ -224,8 +233,46 @@ export const cartAPI = {
 };
 
 // Orders API
+type CheckoutOrderPayload = {
+  shippingAddress: {
+    name: string;
+    address: string;
+    city: string;
+    state: string;
+    zip: string;
+    country: string;
+  };
+  phoneNumber: string;
+  paymentMethod: string;
+  deliveryFee: number;
+  totalAmount: number;
+  paymentStatus: string;
+};
+
+type ModalOrderPayload = {
+  status: string;
+  total: number;
+  shipping_address: {
+    name: string;
+    address: string;
+    city: string;
+    state: string;
+    zip: string;
+    country: string;
+  };
+  items: Array<{
+    product_id: string;
+    quantity: number;
+    size: string | null;
+    color: string | null;
+    price: number;
+  }>;
+};
+
+type OrderCreatePayload = CheckoutOrderPayload | ModalOrderPayload;
+
 export const ordersAPI = {
-  create: async (orderData: any) => {
+  create: async (orderData: OrderCreatePayload) => {
     const response = await api.post('orders/checkout', orderData);
     return response.data;
   },
@@ -255,8 +302,18 @@ export const testimonialsAPI = {
 };
 
 // Delivery Information API
+export type DeliveryInfoPayload = {
+  firstName: string;
+  lastName: string;
+  address: string;
+  cityTown: string;
+  zipCode: string;
+  mobile: string;
+  email: string;
+};
+
 export const deliveryAPI = {
-  addDeliveryInfo: async (deliveryData: any) => {
+  addDeliveryInfo: async (deliveryData: DeliveryInfoPayload) => {
     const response = await api.post('user/delivery-information', deliveryData);
     return response.data;
   },
@@ -266,7 +323,7 @@ export const deliveryAPI = {
     return response.data;
   },
   
-  updateDeliveryInfo: async (deliveryData: any) => {
+  updateDeliveryInfo: async (deliveryData: DeliveryInfoPayload) => {
     const response = await api.put('user/update-delivery-information', deliveryData);
     return response.data;
   },
@@ -279,7 +336,7 @@ export const paymentAPI = {
     email: string; 
     orderId: string; 
     reference: string; 
-    metadata?: any 
+    metadata?: Record<string, unknown> 
   }) => api.post('/payment/initialize-payment', data),
   
   verifyPayment: async (reference: string) => {
@@ -294,6 +351,64 @@ export const paymentAPI = {
   
   getPaymentDetails: async (id: string) => {
     const response = await api.get(`payment/${id}`);
+    return response.data;
+  },
+};
+
+// Delivery Pricing API
+export type DeliveryStateMeta = {
+  stateCode: string;
+  stateName: string;
+  zone?: string;
+  pricingType: 'distance' | 'flat' | 'weight_tier';
+  requiresCoordinates?: boolean;
+  requiresWeight?: boolean;
+  minWeightKg?: number;
+  maxWeightKg?: number;
+  maxDistanceKm?: number;
+};
+
+export type DeliveryQuoteBreakdown = {
+  baseFee: number;
+  distanceFee?: number;
+  weightFee?: number;
+  minFee: number;
+  maxFee?: number;
+};
+
+export type DeliveryQuoteResponse = {
+  success: boolean;
+  fee: number;
+  currency: 'NGN';
+  stateCode: string;
+  stateName: string;
+  zone: string;
+  pricingType: 'distance' | 'flat' | 'weight_tier';
+  distanceKm?: number;
+  breakdown?: DeliveryQuoteBreakdown;
+  message?: string;
+};
+
+export type DeliveryQuotePayload = {
+  customerState: string;
+  customerCity?: string;
+  coordinates?: { lat: number; lng: number };
+  packageWeightKg?: number;
+  includeBreakdown?: boolean;
+};
+
+export const deliveryPricingAPI = {
+  getStates: async (): Promise<DeliveryStateMeta[]> => {
+    const response = await publicApi.get('delivery/states');
+    const data = response.data;
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.states)) return data.states;
+    if (Array.isArray(data?.data)) return data.data;
+    if (Array.isArray(data?.data?.states)) return data.data.states;
+    throw new Error('Unexpected delivery states response');
+  },
+  getQuote: async (payload: DeliveryQuotePayload): Promise<DeliveryQuoteResponse> => {
+    const response = await publicApi.post('delivery/quote', payload);
     return response.data;
   },
 };

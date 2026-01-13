@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
+import { appendUserId, getUserId } from '../utils/navigation';
 
 type AuthModalProps = {
   onClose?: () => void;
@@ -36,19 +37,28 @@ export default function Auth({ onClose }: AuthModalProps) {
             e.preventDefault();
             try {
               setSubmitting(true);
+              const authUser = mode === 'signin'
+                ? await signIn(email, password)
+                : await signUp(name, email, password);
+
+              const userId = getUserId(authUser);
+
               if (mode === 'signin') {
-                await signIn(email, password);
                 toast.success('Signed in successfully');
-                navigate('/dashboard');
+                navigate(appendUserId('/dashboard', userId));
               } else {
-                await signUp(name, email, password);
                 toast.success('Account created successfully');
                 sessionStorage.setItem('pendingEmail', email);
-                navigate('/verify-email');
+                navigate(appendUserId('/verify-email', userId));
               }
               onClose?.();
-            } catch (err: any) {
-              const message = err?.response?.data?.message || 'Something went wrong';
+            } catch (err: unknown) {
+              const message =
+                typeof err === 'object' && err && 'response' in err
+                  ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+                  : err instanceof Error
+                    ? err.message
+                    : 'Something went wrong';
               toast.error(message);
             } finally {
               setSubmitting(false);

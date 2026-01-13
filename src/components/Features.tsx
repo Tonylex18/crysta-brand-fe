@@ -19,7 +19,7 @@ const Features = () => {
     <section className="pt-16 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-6">
-          {features.map((feature, idx) => (
+          {features.map((feature) => (
             <div
               key={feature.label}
               className="flex flex-col items-center justify-center bg-white rounded-xl shadow border p-6"

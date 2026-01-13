@@ -3,11 +3,13 @@ import { Minus, Plus, X, ChevronDown, Tag } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { resolveImageUrl } from './lib/api';
+import { appendUserId, getUserId } from '../utils/navigation';
 
 export default function CartPage() {
   const { cartItems, updateQuantity, removeFromCart, cartTotal } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const userId = getUserId(user);
 
   if (!user) {
     return (
@@ -16,6 +18,12 @@ export default function CartPage() {
           <div className="text-center py-8">
             <h2 className="text-2xl font-bold mb-4">Sign in to view your cart</h2>
             <p className="text-gray-600">Please sign in to add items and checkout</p>
+            <button
+              onClick={() => navigate(appendUserId('/auth', userId))}
+              className="mt-6 px-6 py-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
+            >
+              Go to sign in
+            </button>
           </div>
         </div>
       </div>
@@ -37,7 +45,7 @@ export default function CartPage() {
             <h3 className="text-xl font-semibold mb-2">Your cart is empty</h3>
             <p className="text-gray-600 mb-6">Add some items to get started</p>
             <button
-              onClick={() => navigate('/')}
+              onClick={() => navigate(appendUserId('/', userId))}
               className="px-6 py-3 bg-[#00CFFF] text-white rounded-full hover:bg-[#00CFFF]/90 transition-colors"
             >
               Continue Shopping
@@ -204,7 +212,7 @@ export default function CartPage() {
                   </div>
 
                   <button
-                    onClick={() => navigate('/checkout')}
+                    onClick={() => navigate(appendUserId('/checkout', userId))}
                     className="w-full mt-6 px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
                   >
                     Continue to checkout

@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { X, CreditCard } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useCart } from '../contexts/CartContext';
-import { useAuth } from '../contexts/AuthContext';
 import { ordersAPI } from '../pages/lib/api';
 
 type CheckoutModalProps = {
@@ -12,7 +11,6 @@ type CheckoutModalProps = {
 
 export default function CheckoutModal({ onClose }: CheckoutModalProps) {
   const { cartItems, cartTotal, clearCart } = useCart();
-  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',

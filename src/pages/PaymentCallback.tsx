@@ -3,13 +3,25 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { paymentAPI } from './lib/api';
+import { useCart } from '../contexts/CartContext';
+import { useAuth } from '../contexts/AuthContext';
+import { appendUserId, getUserId } from '../utils/navigation';
 
 export default function PaymentCallback() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { clearCart } = useCart();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<'success' | 'failed' | 'verifying'>('verifying');
-  const [paymentDetails, setPaymentDetails] = useState<any>(null);
+  const [paymentDetails, setPaymentDetails] = useState<{
+    status?: string;
+    amount?: number;
+    reference?: string;
+  } | null>(null);
+  const userIdFromParams = searchParams.get('userId');
+  const userId = userIdFromParams || getUserId(user);
+  const orderId = searchParams.get('orderId');
 
   useEffect(() => {
     const verifyPayment = async () => {
@@ -29,26 +41,38 @@ export default function PaymentCallback() {
           setStatus('success');
           setPaymentDetails(response.data);
           toast.success('Payment verified successfully!');
-          
+
+          try {
+            await clearCart();
+          } catch (err) {
+            console.error('Failed to clear cart after payment:', err);
+          }
+
           // Redirect to dashboard after 3 seconds
           setTimeout(() => {
-            navigate('/dashboard');
+            navigate(appendUserId('/dashboard', userId));
           }, 3000);
         } else {
           setStatus('failed');
           toast.error('Payment verification failed');
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Payment verification error:', error);
         setStatus('failed');
-        toast.error(error.response?.data?.message || 'Failed to verify payment');
+        const message =
+          typeof error === 'object' && error && 'response' in error
+            ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
+            : error instanceof Error
+              ? error.message
+              : 'Failed to verify payment';
+        toast.error(message);
       } finally {
         setLoading(false);
       }
     };
 
     verifyPayment();
-  }, [searchParams, navigate]);
+  }, [searchParams, navigate, clearCart, userId]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
@@ -74,6 +98,16 @@ export default function PaymentCallback() {
                 <p className="text-sm text-gray-600">
                   <span className="font-medium">Reference:</span> {paymentDetails.reference}
                 </p>
+                {orderId && (
+                  <p className="text-sm text-gray-600">
+                    <span className="font-medium">Order:</span> {orderId}
+                  </p>
+                )}
+                {userId && (
+                  <p className="text-sm text-gray-600">
+                    <span className="font-medium">User:</span> {userId}
+                  </p>
+                )}
               </div>
             )}
             <p className="text-sm text-gray-500">
@@ -88,7 +122,7 @@ export default function PaymentCallback() {
               We couldn't process your payment. Please try again or contact support.
             </p>
             <button
-              onClick={() => navigate('/checkout')}
+              onClick={() => navigate(appendUserId('/checkout', userId))}
               className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors w-full"
             >
               Try Again
@@ -99,4 +133,3 @@ export default function PaymentCallback() {
     </div>
   );
 }
-

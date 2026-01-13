@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { cartAPI, CartItem, Product } from '../pages/lib/api';
 
@@ -26,20 +26,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [cartItems, setCartItems] = useState<CartItemWithProduct[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (authLoading) {
-      setLoading(true);
-      return;
-    }
-    if (user) {
-      fetchCart();
-    } else {
-      setCartItems([]);
-      setLoading(false);
-    }
-  }, [user, authLoading]);
-
-  const fetchCart = async () => {
+  const fetchCart = useCallback(async () => {
     if (!user) return;
 
     console.log('fetchCart called');
@@ -56,7 +43,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setCartItems([]);
     }
     setLoading(false);
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (authLoading) {
+      setLoading(true);
+      return;
+    }
+    if (user) {
+      fetchCart();
+    } else {
+      setCartItems([]);
+      setLoading(false);
+    }
+  }, [user, authLoading, fetchCart]);
 
   const addToCart = async (
     productId: string,
@@ -149,6 +149,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useCart() {
   const context = useContext(CartContext);
   if (context === undefined) {

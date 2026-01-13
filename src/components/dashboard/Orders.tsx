@@ -1,5 +1,5 @@
 import SectionCard from './SectionCard';
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import { ordersAPI, resolveImageUrl } from '../../pages/lib/api';
 
@@ -43,36 +43,39 @@ export default function Orders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchOrders();
-  }, [tab]);
-
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     setLoading(true);
     try {
       const response = await ordersAPI.getOrders();
-      if (response.success && response.data) {
+      const data = Array.isArray(response?.data) ? (response.data as Order[]) : [];
+      if (response.success && data.length > 0) {
         // Filter orders based on tab
         const filteredOrders = tab === 'cancelled'
-          ? response.data.filter((order: Order) => order.status === 'cancelled')
-          : response.data.filter((order: Order) => order.status !== 'cancelled');
+          ? data.filter((order) => order.status === 'cancelled')
+          : data.filter((order) => order.status !== 'cancelled');
         setOrders(filteredOrders);
+      } else {
+        setOrders([]);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to fetch orders:', error);
       toast.error('Failed to load orders');
       setOrders([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [tab]);
+
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
 
   const cancelOrder = async (orderId: string) => {
     try {
       await ordersAPI.cancelOrder(orderId);
       toast.success('Order cancelled successfully');
       fetchOrders();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to cancel order:', error);
       toast.error('Failed to cancel order');
     }

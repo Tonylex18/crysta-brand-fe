@@ -80,8 +80,14 @@ export default function DeliveryAddress() {
           toast.error('Failed to add delivery address.');
         }
       }
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'An error occurred.');
+    } catch (error: unknown) {
+      const message =
+        typeof error === 'object' && error && 'response' in error
+          ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
+          : error instanceof Error
+            ? error.message
+            : undefined;
+      toast.error(message || 'An error occurred.');
     }
   };
 
@@ -163,5 +169,4 @@ export default function DeliveryAddress() {
     </SectionCard>
   );
 }
-
 

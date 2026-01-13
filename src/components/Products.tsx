@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Heart, Filter } from 'lucide-react';
 import { toast } from 'react-toastify';
@@ -8,15 +8,16 @@ import { productsAPI, Product as ApiProduct } from '../pages/lib/api';
 
 // Normalize backend product to UI product shape
 type Product = ApiProduct & { id: string; rating?: number };
+type ApiProductWithId = ApiProduct & { _id?: string };
 
 export default function Products() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [priceFilter, setPriceFilter] = useState<string>('all');
   const [sizeFilter, setSizeFilter] = useState<string>('all');
   const { addToCart } = useCart();
   const { user } = useAuth();
+  const isAuthenticated = !!user;
 
   // Build absolute image URL if backend returns a relative path
   const apiOrigin = useMemo(() => {
@@ -25,11 +26,11 @@ export default function Products() {
     return base.replace(/\/api$/, '');
   }, []);
 
-  const toImageUrl = (path?: string | null) => {
+  const toImageUrl = useCallback((path?: string | null) => {
     if (!path) return '';
     if (/^https?:\/\//i.test(path)) return path;
     return `${apiOrigin}/${path.replace(/^\/+/, '')}`;
-  };
+  }, [apiOrigin]);
 
   useEffect(() => {
     let isMounted = true;
@@ -38,14 +39,14 @@ export default function Products() {
       try {
         const res = await productsAPI.getAll();
         // Expecting { success, data: ApiProduct[] }
-        const list: any[] = Array.isArray(res?.data) ? res.data : [];
-        const normalized: Product[] = list.map((p: any) => ({
-          ...(p as ApiProduct),
-          id: (p.id || p._id || '').toString(),
+        const list = Array.isArray(res?.data) ? (res.data as ApiProductWithId[]) : [];
+        const normalized: Product[] = list.map((p) => ({
+          ...p,
+          id: String(p.id || p._id || ''),
           image_url: toImageUrl(p.image_url),
         }));
         if (isMounted) setProducts(normalized);
-      } catch (e) {
+      } catch {
         if (isMounted) setProducts([]);
       } finally {
         if (isMounted) setLoading(false);
@@ -55,15 +56,7 @@ export default function Products() {
     return () => {
       isMounted = false;
     };
-  }, [apiOrigin]);
-
-  // Dummy filter chips
-  const filterChips = [
-    'Price',
-    'Color',
-    'Size',
-    'All Filters'
-  ];
+  }, [toImageUrl]);
 
   // Sort options
   const sortOptions = [
@@ -86,12 +79,15 @@ export default function Products() {
 
   // Filtering
   let filteredProducts = products.filter(product => {
-    let priceOk = true;
-    if (priceFilter === 'under50') priceOk = product.price < 50;
-    else if (priceFilter === '50to100') priceOk = product.price >= 50 && product.price < 100;
-    else if (priceFilter === 'over100') priceOk = product.price >= 100;
+    const priceOk = priceFilter === 'all'
+      ? true
+      : priceFilter === 'under50'
+        ? product.price < 50
+        : priceFilter === '50to100'
+          ? product.price >= 50 && product.price < 100
+          : product.price >= 100;
 
-    let sizeOk = sizeFilter === 'all' || (product.sizes && product.sizes.includes(sizeFilter));
+    const sizeOk = sizeFilter === 'all' || (product.sizes && product.sizes.includes(sizeFilter));
     return priceOk && sizeOk;
   });
 
@@ -120,7 +116,7 @@ export default function Products() {
         product.price
       );
       toast.success('Added to cart!');
-    } catch (error) {
+    } catch {
       toast.error('Failed to add to cart');
     }
   };
@@ -187,6 +183,11 @@ export default function Products() {
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
               Feature Product
             </h2>
+            {!isAuthenticated && (
+              <p className="text-sm text-gray-500">
+                Browse freely, sign in to add items to your cart.
+              </p>
+            )}
           </motion.div>
               
           {loading ? (
@@ -220,7 +221,6 @@ export default function Products() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: index * 0.1 }}
-                  onClick={() => setSelectedProduct(product)}
                   className="group cursor-pointer rounded-2xl transition-all"
                 >
                   <div className="relative aspect-square rounded-2xl overflow-hidden mb-4 flex items-center justify-center">
@@ -258,7 +258,7 @@ export default function Products() {
                     onClick={e => handleQuickAdd(product, e)}
                     className="w-fit px-4 py-1 rounded-full text-gray-900 font-semibold hover:bg-gray-200 transition-all border"
                   >
-                    Add to Cart
+                    {isAuthenticated ? 'Add to Cart' : 'Sign in to add'}
                   </button>
                 </motion.div>
               ))}
@@ -267,12 +267,6 @@ export default function Products() {
         </div>
       </section>
 
-      {/* {selectedProduct && (
-        <ProductModal
-          product={selectedProduct}
-          onClose={() => setSelectedProduct(null)}
-        />
-      )} */}
     </>
   );
 }

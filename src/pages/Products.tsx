@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
-import { productsAPI } from "./lib/api";
+import { productsAPI, Product as ApiProduct } from "./lib/api";
+
+type ApiProductWithId = ApiProduct & { _id?: string };
 
 export default function Products() {
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<ApiProductWithId[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -10,8 +12,9 @@ export default function Products() {
       setLoading(true);
       try {
         const res = await productsAPI.getAll();
-        setProducts(res.data || []);
-      } catch (e) {
+        const list = Array.isArray(res?.data) ? (res.data as ApiProductWithId[]) : [];
+        setProducts(list);
+      } catch {
         setProducts([]);
       }
       setLoading(false);

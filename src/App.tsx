@@ -19,6 +19,7 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Verifyemail from './pages/Verify.email';
 import Dashboard from './pages/Dashboard';
+import DeliveryFee from './pages/DeliveryFee';
 
 function App() {
   return (
@@ -48,6 +49,7 @@ function App() {
               <Route path='/payment/callback' element={<PaymentCallback />} />
               <Route path='/verify-email' element={<Verifyemail />} />
               <Route path='/dashboard' element={<Dashboard />} />
+              <Route path='/delivery-fee' element={<DeliveryFee />} />
             </Routes>
           </div>
         </Router>
