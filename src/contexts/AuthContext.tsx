@@ -31,66 +31,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    const initAuth = async () => {
-      const token = localStorage.getItem('authToken');
-      const cachedUser = localStorage.getItem('authUser');
-
-      if (cachedUser) {
-        try {
-          setUser(normalizeUser(JSON.parse(cachedUser)));
-        } catch {
-          // ignore bad cache
-        }
+    const cachedUser = localStorage.getItem('authUser');
+    if (cachedUser) {
+      try {
+        setUser(normalizeUser(JSON.parse(cachedUser)));
+      } catch {
+        localStorage.removeItem('authUser');
       }
-
-      if (token) {
-        try {
-          const profile = await authAPI.getProfile();
-          const normalized = normalizeUser(profile);
-          setUser(normalized);
-          localStorage.setItem('authUser', JSON.stringify(normalized));
-        } catch {
-          // Try to refresh token if profile fetch fails
-          try {
-            const refreshResponse = await authAPI.refreshToken();
-            localStorage.setItem('authToken', refreshResponse.accessToken);
-            const normalized = normalizeUser(refreshResponse.user);
-            setUser(normalized);
-            localStorage.setItem('authUser', JSON.stringify(normalized));
-          } catch {
-            // If refresh also fails, clear token and sign out
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('authUser');
-            setUser(null);
-          }
-        }
-      }
-      setLoading(false);
-    };
-
-    initAuth();
+    }
+    setLoading(false);
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { user, token } = await authAPI.signIn(email, password);
-    localStorage.setItem('authToken', token);
-    const normalized = normalizeUser(user);
+    const response = await authAPI.signIn(email, password);
+    const token = response.accessToken || response.access_token || response.token;
+    if (token) {
+      localStorage.setItem('authToken', token);
+    }
+    const normalized = normalizeUser(response.user || response);
     setUser(normalized);
     localStorage.setItem('authUser', JSON.stringify(normalized));
     return normalized;
   };
 
   const signUp = async (name: string, email: string, password: string) => {
-    const { user, token } = await authAPI.signUp(name, email, password);
-    localStorage.setItem('authToken', token);
-    const normalized = normalizeUser(user);
+    const response = await authAPI.signUp(email, password, name);
+    const token = response.accessToken || response.access_token || response.token;
+    if (token) {
+      localStorage.setItem('authToken', token);
+    }
+    const normalized = normalizeUser(response.user || response);
     setUser(normalized);
     localStorage.setItem('authUser', JSON.stringify(normalized));
     return normalized;
   };
 
   const signOut = async () => {
-    await authAPI.signOut();
     localStorage.removeItem('authToken');
     localStorage.removeItem('authUser');
     setUser(null);
@@ -103,7 +79,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {

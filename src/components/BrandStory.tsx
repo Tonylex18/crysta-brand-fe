@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion';
 import { Leaf, Recycle, Heart, Shield } from 'lucide-react';
 
 export default function BrandStory() {
@@ -29,11 +28,7 @@ export default function BrandStory() {
     <section id="about" className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
-          <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
+          <div
             className="relative"
           >
             <div className="aspect-[4/5] rounded-2xl overflow-hidden">
@@ -43,14 +38,9 @@ export default function BrandStory() {
                 className="w-full h-full object-cover"
               />
             </div>
-            <div className="absolute -bottom-8 -right-8 w-64 h-64 bg-gradient-to-br from-[#00CFFF] to-blue-500 rounded-2xl -z-10" />
-          </motion.div>
+          </div>
 
-          <motion.div
-            initial={{ opacity: 0, x: 50 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
+          <div
             className="space-y-8"
           >
             <div>
@@ -65,13 +55,8 @@ export default function BrandStory() {
             </div>
 
             <div className="space-y-6">
-              {features.map((feature, index) => (
-                <motion.div
-                  key={feature.title}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.1 }}
+              {features.map((feature) => (
+                <div
                   className="flex items-start space-x-4"
                 >
                   <div className="flex-shrink-0 w-12 h-12 bg-[#00CFFF]/10 rounded-xl flex items-center justify-center">
@@ -85,18 +70,16 @@ export default function BrandStory() {
                       {feature.description}
                     </p>
                   </div>
-                </motion.div>
+                </div>
               ))}
             </div>
 
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+            <button
               className="px-8 py-4 bg-gray-900 text-white font-semibold rounded-full hover:bg-gray-800 transition-colors"
             >
               Learn More About Us
-            </motion.button>
-          </motion.div>
+            </button>
+          </div>
         </div>
       </div>
     </section>

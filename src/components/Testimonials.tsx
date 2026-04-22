@@ -1,27 +1,41 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Star } from 'lucide-react';
-import { Testimonial, testimonialsAPI } from '../pages/lib/api';
+
+type Testimonial = {
+  id: string;
+  name: string;
+  comment: string;
+  rating: number;
+  avatar_url: string;
+};
+
+const testimonials: Testimonial[] = [
+  {
+    id: 't-1',
+    name: 'Amaka O.',
+    comment: 'The quality surprised me. My order arrived neatly packaged and looked exactly like the photos.',
+    rating: 5,
+    avatar_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=240&q=80',
+  },
+  {
+    id: 't-2',
+    name: 'David E.',
+    comment: 'Checkout was smooth, delivery was fast, and the fit was right on the first try.',
+    rating: 5,
+    avatar_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=240&q=80',
+  },
+  {
+    id: 't-3',
+    name: 'Kemi A.',
+    comment: 'I ordered again after my first purchase. The styles feel premium without the usual markup.',
+    rating: 4,
+    avatar_url: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=240&q=80',
+  },
+];
 
 export default function Testimonials() {
-  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchTestimonials();
-  }, []);
-
-  const fetchTestimonials = async () => {
-    setLoading(true);
-    try {
-      const data = await testimonialsAPI.getAll();
-      setTestimonials(data);
-    } catch (error) {
-      console.error('Failed to fetch testimonials:', error);
-    }
-    setLoading(false);
-  };
 
   const next = () => {
     setCurrentIndex((prev) => (prev + 1) % testimonials.length);
@@ -31,7 +45,7 @@ export default function Testimonials() {
     setCurrentIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length);
   };
 
-  if (loading || testimonials.length === 0) {
+  if (testimonials.length === 0) {
     return null;
   }
 

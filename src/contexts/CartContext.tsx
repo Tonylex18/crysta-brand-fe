@@ -1,49 +1,55 @@
 import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react';
+import { toast } from 'react-toastify';
 import { useAuth } from './AuthContext';
-import { cartAPI, CartItem, Product } from '../pages/lib/api';
-
-// Define the actual cart item type that comes from the backend
-type CartItemWithProduct = Omit<CartItem, 'product_id' | 'id'> & {
-  _id: string;
-  product_id: Product;
-};
+import { cartAPI, CartItem, CartResponse } from '../pages/lib/api';
 
 type CartContextType = {
-  cartItems: CartItemWithProduct[];
+  cartItems: CartItem[];
   loading: boolean;
-  addToCart: (productId: string, size: string, color: string, price: number, quantity?: number) => Promise<void>;
-  removeFromCart: (itemId: string) => Promise<void>;
-  updateQuantity: (itemId: string, quantity: number) => Promise<void>;
+  addToCart: (productId: string, quantity?: number) => Promise<void>;
+  removeFromCart: (productId: string) => Promise<void>;
+  updateQuantity: (productId: string, quantity: number) => Promise<void>;
   clearCart: () => Promise<void>;
-  cartTotal: number;
+  cartSubtotalKobo: number;
+  cartUpdatedAt: string | null;
   cartCount: number;
 };
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+const redirectToAuth = () => {
+  localStorage.removeItem('authToken');
+  localStorage.removeItem('authUser');
+  window.location.href = '/auth';
+};
+
 export function CartProvider({ children }: { children: ReactNode }) {
   const { user, loading: authLoading } = useAuth();
-  const [cartItems, setCartItems] = useState<CartItemWithProduct[]>([]);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [cartSubtotalKobo, setCartSubtotalKobo] = useState(0);
+  const [cartUpdatedAt, setCartUpdatedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const applyCartResponse = useCallback((response: CartResponse) => {
+    setCartItems(response.items || []);
+    setCartSubtotalKobo(response.items_subtotal_kobo || 0);
+    setCartUpdatedAt(response.updated_at || null);
+  }, []);
 
   const fetchCart = useCallback(async () => {
     if (!user) return;
-
-    console.log('fetchCart called');
     setLoading(true);
     try {
-      const response = await cartAPI.getItems();
-      console.log('fetchCart API response:', response);
-      // Backend returns { success, data: CartItem[] } where CartItem has populated product_id
-      const items = response?.data || [];
-      console.log('fetchCart items:', items);
-      setCartItems(items);
+      const response = await cartAPI.get();
+      applyCartResponse(response);
     } catch (error) {
       console.error('Failed to fetch cart:', error);
       setCartItems([]);
+      setCartSubtotalKobo(0);
+      setCartUpdatedAt(null);
     }
     setLoading(false);
-  }, [user]);
+  }, [user, applyCartResponse]);
 
   useEffect(() => {
     if (authLoading) {
@@ -54,84 +60,52 @@ export function CartProvider({ children }: { children: ReactNode }) {
       fetchCart();
     } else {
       setCartItems([]);
+      setCartSubtotalKobo(0);
+      setCartUpdatedAt(null);
       setLoading(false);
     }
   }, [user, authLoading, fetchCart]);
 
-  const addToCart = async (
-    productId: string,
-    size: string,
-    color: string,
-    price: number,
-    quantity: number = 1
-  ) => {
-    if (!user) throw new Error('Must be logged in to add to cart');
-
-    const existingItem = cartItems.find(
-      item =>
-        item.product_id.id === productId &&
-        item.size === size &&
-        item.color === color &&
-        item.price === price
-    );
-
-    if (existingItem) {
-      await updateQuantity(existingItem._id, existingItem.quantity + quantity);
-    } else {
-      try {
-        await cartAPI.addItem(productId, size, price, color, quantity);
-        await fetchCart();
-      } catch (error) {
-        console.error('Failed to add item to cart:', error);
-        throw error;
-      }
-    }
-  };
-
-  const removeFromCart = async (itemId: string) => {
-    console.log('removeFromCart called with itemId:', itemId);
-    try {
-      const result = await cartAPI.removeItem(itemId);
-      console.log('removeFromCart API result:', result);
-      await fetchCart();
-    } catch (error) {
-      console.error('Failed to remove item from cart:', error);
-      throw error;
-    }
-  };
-
-  const updateQuantity = async (itemId: string, quantity: number) => {
-    console.log('updateQuantity called with itemId:', itemId, 'quantity:', quantity);
-    if (quantity <= 0) {
-      console.log('Quantity is 0 or negative, removing item');
-      await removeFromCart(itemId);
+  const addToCart = async (productId: string, quantity: number = 1) => {
+    if (!user) {
+      toast.error('Please sign in first before adding item to cart');
+      redirectToAuth();
       return;
     }
-
     try {
-      const result = await cartAPI.updateItem(itemId, quantity);
-      console.log('updateQuantity API result:', result);
-      await fetchCart();
-    } catch (error) {
-      console.error('Failed to update cart item quantity:', error);
+      const response = await cartAPI.addItem(productId, quantity);
+      applyCartResponse(response);
+    } catch (error: any) {
+      if (error?.response?.status === 401) {
+        toast.error('Please sign in first before adding item to cart');
+        redirectToAuth();
+        return;
+      }
       throw error;
     }
+  };
+
+  const removeFromCart = async (productId: string) => {
+    if (!user) return;
+    const response = await cartAPI.removeItem(productId);
+    applyCartResponse(response);
+  };
+
+  const updateQuantity = async (productId: string, quantity: number) => {
+    if (!user) return;
+    if (quantity <= 0) {
+      await removeFromCart(productId);
+      return;
+    }
+    const response = await cartAPI.updateItem(productId, quantity);
+    applyCartResponse(response);
   };
 
   const clearCart = async () => {
     if (!user) return;
-
-    try {
-      await cartAPI.clear();
-      setCartItems([]);
-    } catch (error) {
-      console.error('Failed to clear cart:', error);
-      throw error;
-    }
+    const response = await cartAPI.clear();
+    applyCartResponse(response);
   };
-
-  const cartTotal = cartItems.reduce((sum, item) => sum + (item.product_id.price || item.price || 0) * item.quantity, 0);
-  const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <CartContext.Provider value={{
@@ -141,15 +115,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
       removeFromCart,
       updateQuantity,
       clearCart,
-      cartTotal,
-      cartCount,
+      cartSubtotalKobo,
+      cartUpdatedAt,
+      cartCount: cartItems.reduce((sum, item) => sum + item.quantity, 0),
     }}>
       {children}
     </CartContext.Provider>
   );
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
 export function useCart() {
   const context = useContext(CartContext);
   if (context === undefined) {

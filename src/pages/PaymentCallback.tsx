@@ -35,11 +35,12 @@ export default function PaymentCallback() {
       }
 
       try {
-        const response = await paymentAPI.verifyPayment(reference);
-        
-        if (response.success && response.data.status === 'success') {
+        const response = await paymentAPI.verify(reference);
+        const status = response?.status || response?.data?.status;
+
+        if (status === 'success') {
           setStatus('success');
-          setPaymentDetails(response.data);
+          setPaymentDetails(response?.data || response);
           toast.success('Payment verified successfully!');
 
           try {

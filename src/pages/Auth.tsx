@@ -21,7 +21,7 @@ export default function Auth({ onClose }: AuthModalProps) {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8">
         <div className="text-center">
-          <h2 className="text-3xl font-bold mb-4 text-[#00CFFF]">
+          <h2 className="text-3xl font-bold mb-4 text-[#12108b]">
             {mode === 'signin' ? 'Sign In to Crysta' : 'Create Your Crysta Account'}
           </h2>
           <p className="text-gray-600 mb-8">
@@ -75,7 +75,7 @@ export default function Auth({ onClose }: AuthModalProps) {
                 value={name}
                 onChange={e => setName(e.target.value)}
                 required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00CFFF]"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#12108b]"
                 placeholder="Jane Doe"
               />
             </div>
@@ -89,7 +89,7 @@ export default function Auth({ onClose }: AuthModalProps) {
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00CFFF]"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#12108b]"
               placeholder="you@example.com"
             />
           </div>
@@ -103,14 +103,14 @@ export default function Auth({ onClose }: AuthModalProps) {
               onChange={e => setPassword(e.target.value)}
               required
               minLength={6}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00CFFF]"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#12108b]"
               placeholder="••••••••"
             />
           </div>
           <button
             type="submit"
             disabled={submitting}
-            className={`w-full px-6 py-3 text-white font-semibold rounded-lg transition-colors ${submitting ? 'bg-[#00CFFF]/70 cursor-not-allowed' : 'bg-[#00CFFF] hover:bg-[#00CFFF]/90'}`}
+            className={`w-full px-6 py-3 text-white font-semibold rounded-lg transition-colors ${submitting ? 'bg-[#12108b]/90 cursor-not-allowed' : 'bg-[#12108b] hover:bg-[#12108b]/90'}`}
           >
             {submitting ? 'Please wait...' : (mode === 'signin' ? 'Sign In' : 'Sign Up')}
           </button>
@@ -120,7 +120,7 @@ export default function Auth({ onClose }: AuthModalProps) {
           <button
             type="button"
             onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}
-            className="text-sm text-gray-600 hover:text-[#00CFFF] transition-colors"
+            className="text-sm text-gray-600 hover:text-[#12108b] transition-colors"
           >
             {mode === 'signin'
               ? "Don't have an account? Sign up"
