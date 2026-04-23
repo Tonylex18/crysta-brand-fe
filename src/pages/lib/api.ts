@@ -198,12 +198,15 @@ export type User = {
 };
 
 export type CartItem = {
+  id: string;
   product_id: string;
   name: string;
   price_kobo: number;
   weight_grams: number;
   is_fragile: boolean;
   is_oversize: boolean;
+  selected_size?: string;
+  selected_color?: string;
   image_url?: string | null;
   quantity: number;
 };
@@ -306,9 +309,13 @@ export type Order = {
     phone: string;
   };
   items: Array<{
+    id?: string;
+    _id?: string;
     product_id: string;
     name: string;
     price_kobo: number;
+    selected_size?: string;
+    selected_color?: string;
     quantity: number;
   }>;
   createdAt?: string;
@@ -365,6 +372,17 @@ export type LocationCity = {
   id: string;
   name: string;
   state_id: string;
+};
+
+export type ContactMessage = {
+  id: string;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  status: string;
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type ApiPagination = {
@@ -455,6 +473,25 @@ export const authAPI = {
   },
   signIn: async (email: string, password: string) => {
     const response = await api.post('user/login', { email, password });
+    return response.data;
+  },
+};
+
+export const newsletterAPI = {
+  subscribe: async (email: string): Promise<{ success: boolean; message: string }> => {
+    const response = await publicApi.post("newsletter/subscribe", { email });
+    return response.data;
+  },
+};
+
+export const contactAPI = {
+  sendMessage: async (payload: {
+    name: string;
+    email: string;
+    subject: string;
+    message: string;
+  }): Promise<{ success: boolean; message: string; contact_message: ContactMessage }> => {
+    const response = await publicApi.post("contact", payload);
     return response.data;
   },
 };
@@ -552,18 +589,27 @@ export const cartAPI = {
   get: async (): Promise<CartResponse> => {
     return cachedGet(api, 'cart', { scope: 'auth', ttlMs: 5_000 });
   },
-  addItem: async (productId: string, quantity: number = 1): Promise<CartResponse> => {
-    const response = await api.post('cart/items', { product_id: productId, quantity });
+  addItem: async (
+    productId: string,
+    quantity: number = 1,
+    options?: { selectedSize?: string | null; selectedColor?: string | null },
+  ): Promise<CartResponse> => {
+    const response = await api.post('cart/items', {
+      product_id: productId,
+      quantity,
+      selected_size: options?.selectedSize || undefined,
+      selected_color: options?.selectedColor || undefined,
+    });
     invalidateCachedGets(['cart']);
     return response.data;
   },
-  updateItem: async (productId: string, quantity: number): Promise<CartResponse> => {
-    const response = await api.put(`cart/items/${productId}`, { quantity });
+  updateItem: async (itemId: string, quantity: number): Promise<CartResponse> => {
+    const response = await api.put(`cart/items/${itemId}`, { quantity });
     invalidateCachedGets(['cart']);
     return response.data;
   },
-  removeItem: async (productId: string): Promise<CartResponse> => {
-    const response = await api.delete(`cart/items/${productId}`);
+  removeItem: async (itemId: string): Promise<CartResponse> => {
+    const response = await api.delete(`cart/items/${itemId}`);
     invalidateCachedGets(['cart']);
     return response.data;
   },

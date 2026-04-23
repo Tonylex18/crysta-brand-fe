@@ -62,7 +62,7 @@ export default function CartPage() {
             <div className="lg:col-span-2 space-y-4">
               <h1 className="text-3xl font-bold">Shopping Cart</h1>
               {cartItems.map((item) => (
-                <div key={item.product_id} className="bg-white rounded-lg border border-gray-200 p-4 flex gap-4">
+                <div key={item.id} className="bg-white rounded-lg border border-gray-200 p-4 flex gap-4">
                   <img
                     src={resolveImageUrl(item.image_url)}
                     alt={item.name}
@@ -74,10 +74,20 @@ export default function CartPage() {
                         <h3 className="font-semibold text-gray-900 text-sm leading-tight">
                           {item.name}
                         </h3>
+                        {(item.selected_color || item.selected_size) && (
+                          <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-medium text-gray-600">
+                            {item.selected_color ? (
+                              <span className="rounded-full bg-gray-100 px-2.5 py-1">Color: {item.selected_color}</span>
+                            ) : null}
+                            {item.selected_size ? (
+                              <span className="rounded-full bg-gray-100 px-2.5 py-1">Size: {item.selected_size}</span>
+                            ) : null}
+                          </div>
+                        )}
                         <p className="text-xs text-gray-600 mt-1">Weight: {item.weight_grams}g</p>
                       </div>
                       <button
-                        onClick={() => removeFromCart(item.product_id)}
+                        onClick={() => removeFromCart(item.id)}
                         className="p-1 hover:bg-red-50 rounded transition-colors"
                       >
                         <X className="w-4 h-4 text-gray-500" />
@@ -87,14 +97,14 @@ export default function CartPage() {
                     <div className="mt-4 flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <button
-                          onClick={() => updateQuantity(item.product_id, item.quantity - 1)}
+                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
                           className="w-6 h-6 bg-white border border-gray-300 rounded flex items-center justify-center hover:bg-gray-50 transition-colors"
                         >
                           <Minus className="w-3 h-3" />
                         </button>
                         <span className="w-8 text-center font-semibold text-sm">{item.quantity}</span>
                         <button
-                          onClick={() => updateQuantity(item.product_id, item.quantity + 1)}
+                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
                           className="w-6 h-6 bg-white border border-gray-300 rounded flex items-center justify-center hover:bg-gray-50 transition-colors"
                         >
                           <Plus className="w-3 h-3" />

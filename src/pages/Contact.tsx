@@ -1,4 +1,30 @@
+import { FormEvent, useState } from "react";
+import { toast } from "react-toastify";
+import { contactAPI } from "./lib/api";
+
 export default function ContactPage() {
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    subject: "",
+    message: "",
+  });
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    try {
+      setSubmitting(true);
+      const response = await contactAPI.sendMessage(form);
+      toast.success(response.message || "Message sent successfully");
+      setForm({ name: "", email: "", subject: "", message: "" });
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || error?.message || "Failed to send message");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#fcfcff]">
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
@@ -33,33 +59,42 @@ export default function ContactPage() {
               This page is ready for your preferred contact workflow. For now it provides direct contact details and a placeholder form layout.
             </p>
 
-            <form className="mt-8 space-y-4">
+            <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
               <div className="grid gap-4 md:grid-cols-2">
                 <input
                   type="text"
                   placeholder="Your name"
+                  value={form.name}
+                  onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
                   className="rounded-2xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#12108b]/20"
                 />
                 <input
                   type="email"
                   placeholder="Email address"
+                  value={form.email}
+                  onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
                   className="rounded-2xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#12108b]/20"
                 />
               </div>
               <input
                 type="text"
                 placeholder="Subject"
+                value={form.subject}
+                onChange={(event) => setForm((current) => ({ ...current, subject: event.target.value }))}
                 className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#12108b]/20"
               />
               <textarea
                 placeholder="Message"
+                value={form.message}
+                onChange={(event) => setForm((current) => ({ ...current, message: event.target.value }))}
                 className="min-h-[180px] w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#12108b]/20"
               />
               <button
-                type="button"
+                type="submit"
+                disabled={submitting}
                 className="rounded-full bg-[#12108b] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#211eb0]"
               >
-                Send Message
+                {submitting ? "Sending..." : "Send Message"}
               </button>
             </form>
           </div>

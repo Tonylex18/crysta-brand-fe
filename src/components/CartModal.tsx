@@ -84,7 +84,7 @@ export default function CartModal({ onClose }: CartModalProps) {
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {cartItems.map((item) => (
                 <div
-                  key={item.product_id}
+                  key={item.id}
                   className="flex space-x-4 p-4 bg-gray-50 rounded-xl"
                 >
                   <img
@@ -96,6 +96,16 @@ export default function CartModal({ onClose }: CartModalProps) {
                     <h3 className="font-semibold text-gray-900 truncate">
                       {item.name}
                     </h3>
+                    {(item.selected_color || item.selected_size) && (
+                      <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-medium text-gray-600">
+                        {item.selected_color ? (
+                          <span className="rounded-full bg-white px-2.5 py-1">Color: {item.selected_color}</span>
+                        ) : null}
+                        {item.selected_size ? (
+                          <span className="rounded-full bg-white px-2.5 py-1">Size: {item.selected_size}</span>
+                        ) : null}
+                      </div>
+                    )}
                     <p className="text-sm text-gray-600">Weight: {item.weight_grams}g</p>
                     <p className="text-lg font-bold text-gray-900 mt-1">
                       {formatNaira(item.price_kobo)}
@@ -103,14 +113,14 @@ export default function CartModal({ onClose }: CartModalProps) {
                   </div>
                   <div className="flex flex-col justify-between items-end">
                     <button
-                      onClick={() => removeFromCart(item.product_id)}
+                      onClick={() => removeFromCart(item.id)}
                       className="p-1 hover:bg-red-50 rounded transition-colors"
                     >
                       <Trash2 className="w-4 h-4 text-red-500" />
                     </button>
                     <div className="flex items-center space-x-2">
                       <button
-                        onClick={() => updateQuantity(item.product_id, item.quantity - 1)}
+                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
                         className="w-6 h-6 bg-white rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors"
                       >
                         <Minus className="w-3 h-3" />
@@ -119,7 +129,7 @@ export default function CartModal({ onClose }: CartModalProps) {
                         {item.quantity}
                       </span>
                       <button
-                        onClick={() => updateQuantity(item.product_id, item.quantity + 1)}
+                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
                         className="w-6 h-6 bg-white rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors"
                       >
                         <Plus className="w-3 h-3" />

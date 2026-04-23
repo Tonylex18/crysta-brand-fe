@@ -141,16 +141,29 @@ export default function Orders() {
                 </div>
               </div>
 
-              <div className="border-t pt-4 space-y-3">
-                {order.items?.map((item) => (
-                  <div key={`${order._id}-${item.product_id}`} className="flex items-center gap-4">
-                    <div className="flex-1">
-                      <h4 className="font-medium">{item.name}</h4>
-                      <p className="text-sm text-gray-600">Qty: {item.quantity}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">{formatNaira((item.price_kobo || 0) * item.quantity)}</p>
-                    </div>
+	              <div className="border-t pt-4 space-y-3">
+	                {order.items?.map((item) => (
+	                  <div
+	                    key={`${order._id}-${item.id || item._id || item.product_id}-${item.selected_size || 'na'}-${item.selected_color || 'na'}`}
+	                    className="flex items-center gap-4"
+	                  >
+	                    <div className="flex-1">
+	                      <h4 className="font-medium">{item.name}</h4>
+	                      <p className="text-sm text-gray-600">Qty: {item.quantity}</p>
+	                      {(item.selected_color || item.selected_size) ? (
+	                        <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-medium text-gray-600">
+	                          {item.selected_color ? (
+	                            <span className="rounded-full bg-gray-100 px-2.5 py-1">Color: {item.selected_color}</span>
+	                          ) : null}
+	                          {item.selected_size ? (
+	                            <span className="rounded-full bg-gray-100 px-2.5 py-1">Size: {item.selected_size}</span>
+	                          ) : null}
+	                        </div>
+	                      ) : null}
+	                    </div>
+	                    <div className="text-right">
+	                      <p className="font-medium">{formatNaira((item.price_kobo || 0) * item.quantity)}</p>
+	                    </div>
                   </div>
                 ))}
               </div>

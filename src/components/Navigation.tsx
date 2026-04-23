@@ -40,11 +40,13 @@ const Navigation = () => {
   const menuItems = [
     { label: 'Shop', path: '/products', plus: true },
     { label: 'About', path: '/about' },
+    { label: 'FAQ', path: '/faq' },
     { label: 'Contact Us', path: '/contact' },
   ];
 
   const mobileMainMenuItems = [
     { label: 'About Us', path: '/about' },
+    { label: 'FAQ', path: '/faq' },
     { label: 'Contact Us', path: '/contact' },
     { label: 'Profile', path: '/dashboard', requiresAuth: true },
   ];

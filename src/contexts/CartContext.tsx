@@ -6,9 +6,13 @@ import { cartAPI, CartItem, CartResponse } from '../pages/lib/api';
 type CartContextType = {
   cartItems: CartItem[];
   loading: boolean;
-  addToCart: (productId: string, quantity?: number) => Promise<void>;
-  removeFromCart: (productId: string) => Promise<void>;
-  updateQuantity: (productId: string, quantity: number) => Promise<void>;
+  addToCart: (
+    productId: string,
+    quantity?: number,
+    options?: { selectedSize?: string | null; selectedColor?: string | null },
+  ) => Promise<void>;
+  removeFromCart: (itemId: string) => Promise<void>;
+  updateQuantity: (itemId: string, quantity: number) => Promise<void>;
   clearCart: () => Promise<void>;
   cartSubtotalKobo: number;
   cartUpdatedAt: string | null;
@@ -66,14 +70,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [user, authLoading, fetchCart]);
 
-  const addToCart = async (productId: string, quantity: number = 1) => {
+  const addToCart = async (
+    productId: string,
+    quantity: number = 1,
+    options?: { selectedSize?: string | null; selectedColor?: string | null },
+  ) => {
     if (!user) {
       toast.error('Please sign in first before adding item to cart');
       redirectToAuth();
       return;
     }
     try {
-      const response = await cartAPI.addItem(productId, quantity);
+      const response = await cartAPI.addItem(productId, quantity, options);
       applyCartResponse(response);
     } catch (error: any) {
       if (error?.response?.status === 401) {
@@ -85,19 +93,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const removeFromCart = async (productId: string) => {
+  const removeFromCart = async (itemId: string) => {
     if (!user) return;
-    const response = await cartAPI.removeItem(productId);
+    const response = await cartAPI.removeItem(itemId);
     applyCartResponse(response);
   };
 
-  const updateQuantity = async (productId: string, quantity: number) => {
+  const updateQuantity = async (itemId: string, quantity: number) => {
     if (!user) return;
     if (quantity <= 0) {
-      await removeFromCart(productId);
+      await removeFromCart(itemId);
       return;
     }
-    const response = await cartAPI.updateItem(productId, quantity);
+    const response = await cartAPI.updateItem(itemId, quantity);
     applyCartResponse(response);
   };
 

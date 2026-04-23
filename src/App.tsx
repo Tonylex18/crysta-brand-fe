@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
 import { WishlistProvider } from './contexts/WishlistContext';
@@ -15,6 +15,7 @@ import Features from './components/Features';
 import Banner from './components/Banner';
 import FlashSaleBanner from './components/FlashSaleBanner';
 import Newsletter from './components/Newsletter';
+import PagePreloader from './components/PagePreloader';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -31,18 +32,29 @@ const DeliveryFee = lazy(() => import('./pages/DeliveryFee'));
 const Wishlist = lazy(() => import('./pages/Wishlist'));
 const AboutPage = lazy(() => import('./pages/About'));
 const ContactPage = lazy(() => import('./pages/Contact'));
+const FaqPage = lazy(() => import('./pages/Faq'));
 
 function RouteFallback() {
-  return (
-    <div className="flex min-h-[40vh] items-center justify-center px-6 py-16">
-      <div className="rounded-full border border-gray-200 bg-white px-6 py-3 text-sm font-medium text-gray-500 shadow-sm">
-        Loading page...
-      </div>
-    </div>
-  );
+  return <PagePreloader label="Loading the next page" />;
 }
 
 function App() {
+  const [showInitialLoader, setShowInitialLoader] = useState(true);
+
+  useEffect(() => {
+    const minDisplayTimer = window.setTimeout(() => {
+      setShowInitialLoader(false);
+    }, 1600);
+
+    return () => {
+      window.clearTimeout(minDisplayTimer);
+    };
+  }, []);
+
+  if (showInitialLoader) {
+    return <PagePreloader fullscreen label="Setting the mood for your next look" />;
+  }
+
   return (
     <AuthProvider>
       <WishlistProvider>
@@ -79,6 +91,7 @@ function App() {
                   <Route path='/product/:id' element={<ProductDetails />} />
                   <Route path='/products' element={<ProductsPage />} />
                   <Route path='/about' element={<AboutPage />} />
+                  <Route path='/faq' element={<FaqPage />} />
                   <Route path='/contact' element={<ContactPage />} />
                 </Routes>
               </Suspense>

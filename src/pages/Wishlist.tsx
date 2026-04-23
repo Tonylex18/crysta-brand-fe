@@ -138,13 +138,23 @@ export default function Wishlist() {
                     </div>
                     <button
                       className="mt-2 w-full rounded-full border border-gray-900 py-2 text-xs font-semibold text-gray-900 hover:bg-gray-900 hover:text-white transition"
-                      onClick={(event) => {
+                      onClick={async (event) => {
                         event.stopPropagation();
                         if ((product.stock ?? 0) <= 0) {
                           toast.error('This product is out of stock');
                           return;
                         }
-                        addToCart(product.id || product._id || '', 1);
+                        const productId = product.id || product._id || '';
+                        if (!productId) {
+                          toast.error('Unable to add this product');
+                          return;
+                        }
+                        if ((product.colors?.length || 0) > 0 || (product.sizes?.length || 0) > 0) {
+                          navigate(`/product/${productId}`);
+                          toast.info('Select the item options on the product page before adding to cart');
+                          return;
+                        }
+                        await addToCart(productId, 1);
                       }}
                     >
                       Add to cart

@@ -136,6 +136,11 @@ export default function Products() {
         toast.error('Unable to add this product');
         return;
       }
+      if ((product.colors?.length || 0) > 0 || (product.sizes?.length || 0) > 0) {
+        navigate(`/product/${id}`);
+        toast.info('Select the item options on the product page before adding to cart');
+        return;
+      }
       await addToCart(id, 1);
       toast.success('Added to cart!');
     } catch {

@@ -163,7 +163,10 @@ export default function ProductDetails() {
     const productId = String(product.id || product._id || '');
     if (!productId) return;
     try {
-      await addToCart(productId, quantity);
+      await addToCart(productId, quantity, {
+        selectedSize,
+        selectedColor,
+      });
       toast.success('Added to cart');
     } catch {
       toast.error('Failed to add to cart');

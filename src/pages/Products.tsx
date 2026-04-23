@@ -386,6 +386,11 @@ export default function ProductsPage() {
       return;
     }
     try {
+      if ((product.colors?.length || 0) > 0 || (product.sizes?.length || 0) > 0) {
+        navigate(`/product/${product.id}`);
+        toast.info('Select the item options on the product page before adding to cart');
+        return;
+      }
       await addToCart(product.id, 1);
       toast.success('Added to cart!');
     } catch {
